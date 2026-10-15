@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kuvvet ve Hareket Etkileşimli Simülasyonu</title>
+<style>
+  :root {
+    --panel-bg: #e6ee9c;
+    --panel-border: #827717;
+    --wood-bg: #c59b6d;
+    --wood-border: #6d4c41;
+    --fnet-color: #2e7d32;
+    --ffric-color: #ef6c00;
+    --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #1e272e;
+    font-family: var(--font-main);
+    font-size: 14px;
+    color: #212121;
+  }
+
+  #viewport-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #app-stage {
+    width: 1040px;
+    height: 590px;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform-origin: center center;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #scene-section {
+    position: relative;
+    width: 1040px;
+    height: 330px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #81d4fa;
+  }
+
+  #sim-canvas {
+    width: 1040px;
+    height: 330px;
+    display: block;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  #control-panel {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 225px;
+    background: linear-gradient(180deg, #f0f4c3 0%, #dce775 100%);
+    border: 2px solid #7cb342;
+    border-radius: 10px;
+    padding: 7px 9px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.22);
+    z-index: 10;
+    font-size: 14px;
+  }
+
+  .chk-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    line-height: 1.15;
+  }
+
+  .chk-row label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1b5e20;
+  }
+
+  .chk-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2e7d32;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .slider-box {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(0,0,0,0.15);
+    text-align: center;
+  }
+
+  .slider-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #33691e;
+    margin-bottom: 2px;
+  }
+
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .slider-box input[type="range"] {
+    width: 100%;
+    margin: 2px 0;
+    cursor: pointer;
+    accent-color: #0288d1;
+    height: 16px;
+  }
+
+  #playback-controls {
+    position: absolute;
+    top: 284px;
+    left: 8px;
+    width: 225px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+    gap: 4px;
+  }
+
+  .round-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    transition: transform 0.1s;
+    padding: 0;
+  }
+
+  .round-btn:active { transform: scale(0.92); }
+
+  .btn-blue { background: radial-gradient(circle at 30% 30%, #64b5f6, #1976d2); }
+  .btn-orange { background: radial-gradient(circle at 30% 30%, #ffb74d, #e65100); }
+  .btn-green { background: radial-gradient(circle at 30% 30%, #81c784, #2e7d32); }
+
+  .btn-clean {
+    flex: 1;
+    height: 30px;
+    border-radius: 15px;
+    border: 1px solid #fff;
+    background: linear-gradient(180deg, #ef5350, #c62828);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    padding: 0 4px;
+  }
+
+  #draw-hint {
+    position: absolute;
+    bottom: 4px;
+    left: 236px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0d47a1;
+    border: 1px solid #90caf9;
+    pointer-events: none;
+    z-index: 6;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+
+  #middle-section {
+    width: 1040px;
+    height: 212px;
+    display: flex;
+    border-top: 2px solid #5d4037;
+    border-bottom: 2px solid #5d4037;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  #objects-area {
+    width: 420px;
+    height: 100%;
+    background: var(--wood-bg);
+    display: flex;
+    border-right: 3px solid #5d4037;
+    padding: 8px;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .obj-compartment {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .obj-title {
+    text-align: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #212121;
+    margin-bottom: 2px;
+  }
+
+  .obj-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    align-items: center;
+    height: 125px;
+  }
+
+  .obj-item {
+    background: rgba(255, 255, 255, 0.35);
+    border: 2px solid #6d4c41;
+    border-radius: 6px;
+    height: 112px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.15s;
+  }
+
+  .obj-item:hover { background: rgba(255, 255, 255, 0.65); transform: translateY(-2px); }
+  .obj-item.active { background: #fff9c4; border-color: #d84315; box-shadow: 0 0 0 2px #ff8a65; }
+
+  .obj-name { font-weight: 700; font-size: 13px; margin-top: 4px; text-align: center; color: #212121; }
+  .obj-mass-tag { font-size: 13px; font-weight: 800; color: #b71c1c; background: rgba(255,255,255,0.8); padding: 0 4px; border-radius: 4px; margin-top: 2px; }
+
+  #table-area {
+    width: 620px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+
+  #table-toolbar {
+    height: 30px;
+    background: #eceff1;
+    border-bottom: 1px solid #b0bec5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+  }
+
+  .mode-tabs { display: flex; gap: 4px; }
+  .mode-btn {
+    padding: 2px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #78909c;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    color: #37474f;
+  }
+  .mode-btn.active { background: #1565c0; color: #fff; border-color: #0d47a1; }
+
+  #check-table-btn {
+    background: #2e7d32;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+  }
+
+  #table-feedback {
+    font-size: 13px;
+    font-weight: 700;
+    color: #d84315;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
+  .table-container-scroll {
+    width: 100%;
+    height: calc(100% - 30px);
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  #force-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: 13px;
+  }
+
+  #force-table th, #force-table td {
+    border: 1px solid #424242;
+    padding: 2px 5px;
+    text-align: center;
+    vertical-align: middle;
+    height: 28px;
+    white-space: nowrap;
+  }
+
+  #force-table th {
+    background: #f5f5f5;
+    font-weight: 800;
+    color: #212121;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  #force-table th:first-child { min-width: 155px; left: 0; z-index: 3; background: #e0e0e0; }
+
+  .tbl-select, .tbl-input {
+    width: 92%;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 1px 2px;
+    border: 1px solid #90a4ae;
+    border-radius: 3px;
+    text-align: center;
+    background: #fff;
+  }
+
+  .cell-correct { background-color: #c8e6c9 !important; color: #1b5e20 !important; font-weight: 700; }
+  .cell-wrong { background-color: #ffcdd2 !important; color: #b71c1c !important; font-weight: 700; }
+
+  #bottom-section {
+    width: 1040px;
+    height: 48px;
+    background: #eceff1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    flex-shrink: 0;
+    border-top: 1px solid #cfd8dc;
+    position: relative;
+  }
+
+  .module-btn {
+    background: linear-gradient(130deg, #1e88e5, #1565c0);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .module-btn:hover { background: linear-gradient(130deg, #1565c0, #0d47a1); }
+
+  #module-modal-panel {
+    position: absolute;
+    bottom: 48px;
+    left: 0;
+    width: 1040px;
+    height: 260px;
+    background: #fff;
+    border-top: 3px solid #1565c0;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.25);
+    z-index: 25;
+    display: none;
+    flex-direction: column;
+    padding: 10px 15px;
+    overflow-y: auto;
+  }
+
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #b0bec5;
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+  }
+
+  .mod-title { font-size: 16px; font-weight: 800; color: #0d47a1; }
+  .mod-close { background: #d32f2f; color: #fff; border: none; border-radius: 4px; width: 24px; height: 24px; font-weight: bold; cursor: pointer; }
+
+  .elements-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .element-card {
+    background: #f1f8e9;
+    border: 2px solid #7cb342;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .element-card h4 { margin: 0 0 4px 0; color: #33691e; font-size: 14px; }
+  .element-card p { margin: 0; font-size: 12px; color: #37474f; }
+</style>
+</head>
+<body>
+
+<div id="viewport-wrapper">
+  <div id="app-stage">
+
+    <div id="scene-section">
+      <canvas id="sim-canvas" width="1040" height="330"></canvas>
+
+      <div id="control-panel">
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-forces" checked> Kuvvetler</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-net" checked> Net Kuvvet</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-values" checked> Büyüklükleri Göster</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-Direction" checked> Doğrultu Çizgisi</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-direction-var" checked> Yön</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-masses" checked> Kütleleri Göster</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-speed" checked> Hız Göstergesi</label>
+        </div>
+        <div class="chk-row">
+          <label><input type="checkbox" id="chk-freedir" checked> Serbest Yön (Açılı)</label>
+        </div>
+
+        <div class="slider-box">
+          <div class="slider-title">Sürtünme Kuvveti (<span id="mu-label">μ = 0.00</span>)</div>
+          <div class="slider-labels"><span>Az</span><span>Çok</span></div>
+          <input type="range" id="slider-friction" min="0" max="1" step="0.05" value="0.00">
+        </div>
+      </div>
+
+      <div id="playback-controls">
+        <button id="btn-play-pause" class="round-btn btn-blue" title="Başlat / Duraklat">⏸</button>
+        <button id="btn-add-force" class="round-btn btn-green" title="Yeni Kuvvet Ekle (+) ➕">➕</button>
+        <button id="btn-reset" class="round-btn btn-orange" title="Sıfırla">↻</button>
+        <button id="btn-clear-vectors" class="btn-clean" title="Tüm Vektörleri Sil">Temizle</button>
+      </div>
+
+      <div id="draw-hint">
+        💡 Cismin kenar çizgilerinden başlayarak kuvvet çizebilirsiniz (Sağ tık: Sil).
+      </div>
+    </div>
+
+    <div id="middle-section">
+      <div id="objects-area">
+        <div class="obj-compartment">
+          <div class="obj-title">CİSİMLER (Seç veya Sürükle)</div>
+          <div class="obj-grid">
+            <div class="obj-item active" data-type="crate" data-mass="50" data-name="Sandık" draggable="true">
+              <svg width="42" height="42" viewBox="0 0 60 60">
+                <rect x="4" y="4" width="52" height="52" fill="#c59b6d" stroke="#5d4037" stroke-width="3"/>
+                <line x1="4" y1="4" x2="56" y2="56" stroke="#8d6e63" stroke-width="4"/>
+                <line x1="56" y1="4" x2="4" y2="56" stroke="#8d6e63" stroke-width="4"/>
+              </svg>
+              <div class="obj-name">Sandık</div>
+              <div class="obj-mass-tag">50 kg</div>
+            </div>
+            <div class="obj-item" data-type="books" data-mass="25" data-name="Kitap Yığını" draggable="true">
+              <svg width="42" height="42" viewBox="0 0 60 60">
+                <rect x="8" y="38" width="44" height="12" rx="2" fill="#1e88e5" stroke="#0d47a1" stroke-width="2"/>
+                <rect x="10" y="26" width="40" height="12" rx="2" fill="#e53935" stroke="#b71c1c" stroke-width="2"/>
+                <rect x="12" y="14" width="36" height="12" rx="2" fill="#43a047" stroke="#1b5e20" stroke-width="2"/>
+              </svg>
+              <div class="obj-name">Kitaplar</div>
+              <div class="obj-mass-tag">25 kg</div>
+            </div>
+            <div class="obj-item" data-type="fridge" data-mass="100" data-name="Buzdolabı" draggable="true">
+              <svg width="42" height="42" viewBox="0 0 60 60">
+                <rect x="14" y="4" width="32" height="52" rx="3" fill="#eceff1" stroke="#455a64" stroke-width="3"/>
+                <line x1="14" y1="24" x2="46" y2="24" stroke="#455a64" stroke-width="2"/>
+              </svg>
+              <div class="obj-name">Buzdolabı</div>
+              <div class="obj-mass-tag">100 kg</div>
+            </div>
+            <div class="obj-item" data-type="safe" data-mass="100" data-name="Çelik Kasa" draggable="true">
+              <svg width="42" height="42" viewBox="0 0 60 60">
+                <rect x="8" y="8" width="44" height="44" rx="4" fill="#546e7a" stroke="#263238" stroke-width="3"/>
+                <circle cx="34" cy="30" r="9" fill="#cfd8dc" stroke="#263238" stroke-width="2"/>
+              </svg>
+              <div class="obj-name">Kasa</div>
+              <div class="obj-mass-tag">100 kg</div>
+            </div>
+          </div>
+          <div style="font-size:13px; font-weight:600; color:#3e2723; text-align:center;">
+            Seçili: <span id="active-obj-label">Sandık (50 kg)</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="table-area">
+        <div id="table-toolbar">
+          <div class="mode-tabs">
+            <button class="mode-btn active" id="btn-mode-obs">👁 Gözlem</button>
+            <button class="mode-btn" id="btn-mode-stu">✏️ Öğrenci</button>
+          </div>
+          <span id="table-feedback"></span>
+          <button id="check-table-btn">✓ Kontrol</button>
+        </div>
+
+        <div class="table-container-scroll">
+          <table id="force-table">
+            <thead id="force-table-head"></thead>
+            <tbody id="force-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="bottom-section">
+      <button class="module-btn" id="mod-btn-1">📘 1. Elemanlar</button>
+      <button class="module-btn" id="mod-btn-2">⚖️ 2. Bileşke</button>
+      <button class="module-btn" id="mod-btn-3">🔄 3. Dengelenmiş</button>
+      <button class="module-btn" id="mod-btn-4">📝 4. Değerlendirme</button>
+
+      <div id="module-modal-panel">
+        <div class="mod-header">
+          <span class="mod-title" id="mod-panel-title">Modül Başlığı</span>
+          <button class="mod-close" id="mod-panel-close">✕</button>
+        </div>
+        <div id="mod-panel-body" style="font-size:13px; color:#333;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const DESIGN_W = 1040;
+const DESIGN_H = 590;
+const CANVAS_W = 1040;
+const CANVAS_H = 330;
+const GROUND_Y = 278;
+const GRAVITY = 10;
+const PX_PER_NEWTON = 0.42;
+
+const PALETTE = [
+  { name: '1. Kuvvet', hex: '#1565c0' },
+  { name: '2. Kuvvet', hex: '#c62828' },
+  { name: '3. Kuvvet', hex: '#7b1fa2' },
+  { name: '4. Kuvvet', hex: '#00838f' },
+  { name: '5. Kuvvet', hex: '#e65100' },
+  { name: '6. Kuvvet', hex: '#4e342e' }
+];
+
+const state = {
+  running: true,
+  autoResumeAfterDraw: true,
+  currentScale: 1,
+
+  objectType: 'crate',
+  objectName: 'Sandık',
+  mass: 50,
+  velocity: 0,
+  groundOffset: 0,
+
+  mu: 0.00,
+  frictionForce: 0,
+  netForceX: 0,
+  netForceY: 0,
+  netForceMag: 0,
+  netAngleDeg: 0,
+
+  showForces: true,
+  showNetForce: true,
+  showValuesOnHover: true,
+  showDirectionLine: true,
+  showDirectionVar: true,
+  showMasses: true,
+  showSpeedGauge: true,
+  freeDirection: true,
+
+  forces: [],
+
+  interaction: {
+    mode: null,
+    targetId: null,
+    wasRunning: true,
+    hoverId: null
+  },
+
+  tableMode: 'observation',
+  activeModule: null,
+
+  assessment: {
+    answers: {},
+    teacherView: false
+  }
+};
+
+const appStage = document.getElementById('app-stage');
+const canvas = document.getElementById('sim-canvas');
+const ctx = canvas.getContext('2d');
+
+function updateStageScale() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  state.currentScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+  appStage.style.transform = `scale(${state.currentScale})`;
+}
+
+function setupCanvasDPI() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = CANVAS_W * dpr;
+  canvas.height = CANVAS_H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener('resize', () => { updateStageScale(); setupCanvasDPI(); });
+updateStageScale();
+setupCanvasDPI();
+
+function getCardinalDirection(deg) {
+  let norm = deg % 360;
+  if (norm < 0) norm += 360;
+  if ((norm >= 337.5 && norm <= 360) || (norm >= 0 && norm < 22.5)) return 'Doğu';
+  if (norm >= 22.5 && norm < 67.5) return 'Kuzeydoğu';
+  if (norm >= 67.5 && norm < 112.5) return 'Kuzey';
+  if (norm >= 112.5 && norm < 157.5) return 'Kuzeybatı';
+  if (norm >= 157.5 && norm < 202.5) return 'Batı';
+  if (norm >= 202.5 && norm < 247.5) return 'Güneybatı';
+  if (norm >= 247.5 && norm < 292.5) return 'Güney';
+  if (norm >= 292.5 && norm < 337.5) return 'Güneydoğu';
+  return 'Doğu';
+}
+
+function getForceComponents(fObj) {
+  if (!fObj || !fObj.active || fObj.mag <= 0) return { fx: 0, fy: 0 };
+  const rad = (fObj.angleDeg * Math.PI) / 180;
+  let fx = fObj.mag * Math.cos(rad);
+  let fy = fObj.mag * Math.sin(rad);
+  return { fx: Math.abs(fx) < 1e-4 ? 0 : fx, fy: Math.abs(fy) < 1e-4 ? 0 : fy };
+}
+
+function stepPhysics(dt) {
+  let totalFx = 0;
+  let totalFy = 0;
+  state.forces.forEach(f => {
+    const c = getForceComponents(f);
+    totalFx += c.fx;
+    totalFy += c.fy;
+  });
+
+  state.netForceX = Math.round(totalFx);
+  state.netForceY = Math.round(totalFy);
+  state.netForceMag = Math.round(Math.hypot(totalFx, totalFy));
+  
+  let netAngle = (Math.atan2(totalFy, totalFx) * 180) / Math.PI;
+  if (netAngle < 0) netAngle += 360;
+  state.netAngleDeg = Math.round(netAngle);
+
+  const normalForce = Math.max(0, state.mass * GRAVITY - totalFy);
+  const maxStaticFriction = state.mu * normalForce;
+  const kineticFrictionMag = state.mu * 0.85 * normalForce;
+
+  let fFriction = 0;
+  let fNetX = 0;
+
+  if (Math.abs(state.velocity) < 0.005) {
+    state.velocity = 0;
+    if (Math.abs(totalFx) <= maxStaticFriction) {
+      fFriction = -totalFx;
+      fNetX = 0;
+    } else {
+      const dir = Math.sign(totalFx);
+      fFriction = -dir * Math.round(kineticFrictionMag);
+      fNetX = totalFx + fFriction;
+      state.velocity += (fNetX / state.mass) * dt * 0.08;
+    }
+  } else {
+    const velDir = Math.sign(state.velocity);
+    fFriction = -velDir * Math.round(kineticFrictionMag);
+    fNetX = totalFx + fFriction;
+
+    const nextVel = state.velocity + (fNetX / state.mass) * dt * 0.08;
+    if (Math.sign(nextVel) !== velDir && Math.abs(totalFx) <= maxStaticFriction) {
+      state.velocity = 0;
+      fFriction = -totalFx;
+      fNetX = 0;
+    } else {
+      state.velocity = nextVel;
+    }
+  }
+
+  if (state.velocity > 40) state.velocity = 40;
+  if (state.velocity < -40) state.velocity = -40;
+
+  state.frictionForce = Math.round(fFriction);
+  
+  // Zemin kayma hızı düşürüldü ve cisim durduğunda tamamen sabit kalması sağlandı
+  if (Math.abs(state.velocity) < 0.01) {
+    state.velocity = 0;
+  } else {
+    state.groundOffset = (state.groundOffset - state.velocity * 10 * dt) % 48;
+    if (state.groundOffset < 0) state.groundOffset += 48;
+  }
+
+  if (state.tableMode === 'observation') renderForceTable();
+}
+
+function getObjectBox() {
+  let w = 88, h = 88;
+  if (state.objectType === 'books') { w = 84; h = 64; }
+  else if (state.objectType === 'fridge') { w = 76; h = 114; }
+  else if (state.objectType === 'safe') { w = 86; h = 84; }
+
+  const cx = CANVAS_W / 2;
+  const bottomY = GROUND_Y;
+  const topY = bottomY - h;
+  return { x: cx - w / 2, y: topY, w, h, cx, cy: topY + h / 2 };
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  skyGrad.addColorStop(0, '#0288d1');
+  skyGrad.addColorStop(0.65, '#81d4fa');
+  skyGrad.addColorStop(1, '#e1f5fe');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+
+  drawCloud(310, 82, 1.15);
+  drawCloud(565, 76, 0.95);
+  drawMountainRange(320, GROUND_Y, 175, 58);
+  drawMountainRange(845, GROUND_Y, 175, 55);
+
+  if (state.showSpeedGauge) drawSpeedometer(388, 76, 52);
+
+  drawBrickGround();
+  const box = getObjectBox();
+  drawActiveObject(box);
+
+  drawAllForceVectors(box);
+}
+
+function drawCloud(cx, cy, scale) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#cfd8dc';
+  ctx.beginPath();
+  ctx.arc(-45, 10, 26, 0, Math.PI * 2);
+  ctx.arc(-10, 14, 34, 0, Math.PI * 2);
+  ctx.arc(32, 12, 28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(-48, 2, 26, 0, Math.PI * 2);
+  ctx.arc(-15, -10, 34, 0, Math.PI * 2);
+  ctx.arc(25, -8, 30, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMountainRange(baseX, baseY, width, height) {
+  ctx.save();
+  ctx.fillStyle = '#9e9d89';
+  ctx.beginPath();
+  ctx.moveTo(baseX, baseY);
+  ctx.lineTo(baseX + width * 0.35, baseY - height);
+  ctx.lineTo(baseX + width * 0.7, baseY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#616161';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSpeedometer(cx, cy, r) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#37474f';
+  ctx.stroke();
+  ctx.fillStyle = '#212121';
+  ctx.font = 'bold 14px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('Hız', cx, cy - 12);
+  const absSpeed = Math.abs(state.velocity);
+  ctx.fillStyle = '#0d47a1';
+  ctx.fillText(`${absSpeed.toFixed(1)} m/s`, cx, cy + 28);
+  const needleAngle = Math.PI * 0.8 + (Math.min(absSpeed, 30) / 30) * (Math.PI * 1.4);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(needleAngle) * (r - 12), cy + Math.sin(needleAngle) * (r - 12));
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBrickGround() {
+  const tileW = 48;
+  const groundH = CANVAS_H - GROUND_Y;
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(0, GROUND_Y, CANVAS_W, 5);
+  ctx.fillStyle = '#a1887f';
+  ctx.fillRect(0, GROUND_Y + 5, CANVAS_W, groundH - 5);
+
+  const offset = state.groundOffset;
+  for (let x = -tileW + offset; x < CANVAS_W + tileW; x += tileW) {
+    drawSingleBrick(x, GROUND_Y + 7, tileW - 4, 20);
+    drawSingleBrick(x - tileW / 2, GROUND_Y + 30, tileW - 4, 18);
+  }
+}
+
+function drawSingleBrick(x, y, w, h) {
+  ctx.fillStyle = '#8d5524';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#3e2723';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawActiveObject(box) {
+  ctx.save();
+  const { x, y, w, h, cx, cy } = box;
+
+  if (state.objectType === 'crate') {
+    ctx.fillStyle = '#c89d66';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#5d4037';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+  } else if (state.objectType === 'books') {
+    ctx.fillStyle = '#1e88e5'; ctx.fillRect(x+6, y+42, w-12, 16);
+    ctx.fillStyle = '#e53935'; ctx.fillRect(x+4, y+22, w-8, 18);
+    ctx.fillStyle = '#43a047'; ctx.fillRect(x+8, y+4, w-16, 16);
+  } else if (state.objectType === 'fridge') {
+    ctx.fillStyle = '#eceff1'; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#37474f'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+  } else if (state.objectType === 'safe') {
+    ctx.fillStyle = '#607d8b'; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#263238'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+  }
+
+  if (state.showMasses) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.strokeStyle = '#212121';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(cx - 29, cy - 11, 58, 22);
+    ctx.strokeRect(cx - 29, cy - 11, 58, 22);
+    ctx.fillStyle = '#212121';
+    ctx.font = 'bold 13px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${state.mass} kg`, cx, cy);
+  }
+  ctx.restore();
+}
+
+function getVectorEndpoints(fObj, box) {
+  let startX, startY;
+  const edge = fObj.edge || 'left';
+  const ratio = fObj.edgeRatio !== undefined ? fObj.edgeRatio : 0.5;
+
+  if (edge === 'left') {
+    startX = box.x;
+    startY = box.y + box.h * ratio;
+  } else if (edge === 'right') {
+    startX = box.x + box.w;
+    startY = box.y + box.h * ratio;
+  } else if (edge === 'top') {
+    startX = box.x + box.w * ratio;
+    startY = box.y;
+  } else {
+    startX = box.x + box.w * ratio;
+    startY = box.y + box.h;
+  }
+
+  const len = fObj.mag * PX_PER_NEWTON;
+  const rad = (fObj.angleDeg * Math.PI) / 180;
+  return { startX, startY, endX: startX + len * Math.cos(rad), endY: startY - len * Math.sin(rad) };
+}
+
+function drawAllForceVectors(box) {
+  if (state.showForces) {
+    state.forces.forEach((f, idx) => {
+      if (f.active && f.mag > 0) {
+        const { startX, startY, endX, endY } = getVectorEndpoints(f, box);
+
+        if (state.showDirectionLine) {
+          ctx.save();
+          ctx.setLineDash([6, 5]);
+          ctx.strokeStyle = f.color;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          const rad = (f.angleDeg * Math.PI) / 180;
+          const extLen = 350;
+          ctx.moveTo(startX - Math.cos(rad) * extLen, startY + Math.sin(rad) * extLen);
+          ctx.lineTo(endX + Math.cos(rad) * extLen, endY - Math.sin(rad) * extLen);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        drawArrowPrimitive(startX, startY, endX, endY, f.color, 5);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(startX, startY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#b71c1c';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        const isHovered = state.interaction.hoverId === f.id || state.interaction.targetId === f.id;
+
+        if (isHovered || state.interaction.mode === 'drawing' || state.interaction.targetId === f.id) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffeb3b';
+          ctx.fill();
+          ctx.strokeStyle = f.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (state.showValuesOnHover || isHovered || state.interaction.mode === 'drawing' || state.interaction.targetId === f.id) {
+          drawValueBadge(endX, endY - 22, `${idx + 1}. Kuvvet: ${f.mag} N`, f.color);
+        }
+      }
+    });
+
+    if (Math.abs(state.frictionForce) > 0) {
+      const fricLen = Math.abs(state.frictionForce) * PX_PER_NEWTON;
+      const dir = Math.sign(state.frictionForce);
+      drawArrowPrimitive(box.cx, GROUND_Y - 2, box.cx + dir * fricLen, GROUND_Y - 2, '#ef6c00', 4);
+      if (state.showValuesOnHover) drawValueBadge(box.cx + dir * fricLen, GROUND_Y + 16, `Fs = ${Math.abs(state.frictionForce)} N`, '#e65100', true);
+    }
+  }
+
+  if (state.showNetForce) {
+    const netY = box.y - 48;
+    const netLen = state.netForceMag * PX_PER_NEWTON;
+    const netRad = (state.netAngleDeg * Math.PI) / 180;
+    const netEndX = box.cx + netLen * Math.cos(netRad);
+    const netEndY = netY - netLen * Math.sin(netRad);
+
+    if (state.netForceMag > 0) {
+      drawArrowPrimitive(box.cx, netY, netEndX, netEndY, '#2e7d32', 6);
+      if (state.showValuesOnHover || state.interaction.hoverId === 'net') {
+        drawValueBadge(netEndX, netEndY - 22, `Bileşke Kuvvet = ${state.netForceMag} N`, '#1b5e20');
+      }
+    } else {
+      if (state.showValuesOnHover) drawValueBadge(box.cx, netY - 14, 'Bileşke Kuvvet = 0 N', '#2e7d32');
+    }
+  }
+}
+
+function drawArrowPrimitive(x1, y1, x2, y2, color, lineWidth) {
+  const headLen = 12;
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lineWidth; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - Math.cos(angle) * (headLen * 0.7), y2 - Math.sin(angle) * (headLen * 0.7));
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6), y2 - headLen * Math.sin(angle - Math.PI/6));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI/6), y2 - headLen * Math.sin(angle + Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawValueBadge(x, y, text, borderColor, allowInGround = false) {
+  ctx.save();
+  ctx.font = 'bold 14px Segoe UI';
+  const metrics = ctx.measureText(text);
+  const boxW = metrics.width + 14, boxH = 22;
+  let bx = Math.max(10, Math.min(CANVAS_W - boxW - 10, x - boxW / 2));
+  let by = Math.max(8, Math.min(allowInGround ? GROUND_Y - 26 : GROUND_Y - 28, y - boxH / 2));
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.strokeStyle = borderColor; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = borderColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, bx + boxW / 2, by + boxH / 2);
+  ctx.restore();
+}
+
+function getCanvasCoords(evt) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (evt.clientX - rect.left) * (CANVAS_W / rect.width),
+    y: (evt.clientY - rect.top) * (CANVAS_H / rect.height)
+  };
+}
+
+function findHoveredForce(pt, box) {
+  for (const f of state.forces) {
+    if (!f.active || f.mag <= 0) continue;
+    const { startX, startY, endX, endY } = getVectorEndpoints(f, box);
+    const d = distToSegment(pt, {x: startX, y: startY}, {x: endX, y: endY});
+    if (d <= 14 || Math.hypot(pt.x - endX, pt.y - endY) <= 16) return f.id;
+  }
+  return null;
+}
+
+function distToSegment(p, a, b) {
+  const l2 = (b.x - a.x)*(b.x - a.x) + (b.y - a.y)*(b.y - a.y);
+  if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x)*(b.x - a.x) + (p.y - a.y)*(b.y - a.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * (b.x - a.x)), p.y - (a.y + t * (b.y - a.y)));
+}
+
+canvas.addEventListener('contextmenu', (evt) => {
+  evt.preventDefault();
+  const pt = getCanvasCoords(evt);
+  const box = getObjectBox();
+  const fId = findHoveredForce(pt, box);
+  if (fId) {
+    state.forces = state.forces.filter(f => f.id !== fId);
+    stepPhysics(0);
+    renderForceTable();
+    drawScene();
+  }
+});
+
+canvas.addEventListener('pointerdown', (evt) => {
+  if (evt.button === 2) return;
+  const pt = getCanvasCoords(evt);
+  const box = getObjectBox();
+
+  const fId = findHoveredForce(pt, box);
+  if (fId) {
+    state.interaction.mode = 'editing';
+    state.interaction.targetId = fId;
+    state.interaction.wasRunning = state.running;
+    state.running = false;
+    canvas.setPointerCapture(evt.pointerId);
+    return;
+  }
+
+  const pad = 12;
+  if (pt.x >= box.x - pad && pt.x <= box.x + box.w + pad && pt.y >= box.y - pad && pt.y <= box.y + box.h + pad) {
+    const dLeft = Math.abs(pt.x - box.x);
+    const dRight = Math.abs(pt.x - (box.x + box.w));
+    const dTop = Math.abs(pt.y - box.y);
+    const dBottom = Math.abs(pt.y - (box.y + box.h));
+
+    let edge = 'left';
+    let ratio = 0.5;
+    let angle = 0;
+
+    const minDist = Math.min(dLeft, dRight, dTop, dBottom);
+    if (minDist === dLeft) {
+      edge = 'left';
+      ratio = Math.max(0.1, Math.min(0.9, (pt.y - box.y) / box.h));
+      angle = 0;
+    } else if (minDist === dRight) {
+      edge = 'right';
+      ratio = Math.max(0.1, Math.min(0.9, (pt.y - box.y) / box.h));
+      angle = 180;
+    } else if (minDist === dTop) {
+      edge = 'top';
+      ratio = Math.max(0.1, Math.min(0.9, (pt.x - box.x) / box.w));
+      angle = 270;
+    } else {
+      edge = 'bottom';
+      ratio = Math.max(0.1, Math.min(0.9, (pt.x - box.x) / box.w));
+      angle = 90;
+    }
+
+    const newId = 'f_' + Date.now();
+    const color = PALETTE[state.forces.length % PALETTE.length].hex;
+
+    const newForce = {
+      id: newId,
+      active: true,
+      mag: 100,
+      angleDeg: angle,
+      edge: edge,
+      edgeRatio: ratio,
+      color: color
+    };
+
+    state.forces.push(newForce);
+    state.interaction.mode = 'drawing';
+    state.interaction.targetId = newId;
+    state.interaction.wasRunning = state.running;
+    state.running = false;
+    canvas.setPointerCapture(evt.pointerId);
+  }
+});
+
+canvas.addEventListener('pointermove', (evt) => {
+  const pt = getCanvasCoords(evt);
+  const box = getObjectBox();
+
+  const hovered = findHoveredForce(pt, box);
+  if (hovered !== state.interaction.hoverId) {
+    state.interaction.hoverId = hovered;
+    drawScene();
+  }
+  canvas.style.cursor = hovered ? 'grab' : 'crosshair';
+
+  if (!state.interaction.mode) return;
+
+  const f = state.forces.find(item => item.id === state.interaction.targetId);
+  if (!f) return;
+
+  const { startX, startY } = getVectorEndpoints(f, box);
+  const dx = pt.x - startX;
+  const dy = startY - pt.y;
+
+  let rawMag = Math.round((Math.hypot(dx, dy) / PX_PER_NEWTON) / 10) * 10;
+  if (rawMag > 500) rawMag = 500;
+
+  let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  if (deg < 0) deg += 360;
+
+  if (!state.freeDirection) {
+    deg = (Math.round(deg / 90) * 90) % 360;
+  }
+
+  f.mag = rawMag;
+  f.angleDeg = Math.round(deg);
+
+  stepPhysics(0);
+  drawScene();
+});
+
+function finishInteraction() {
+  if (!state.interaction.mode) return;
+  state.interaction.mode = null;
+  state.interaction.targetId = null;
+  state.running = state.autoResumeAfterDraw ? true : state.interaction.wasRunning;
+  renderForceTable();
+}
+
+canvas.addEventListener('pointerup', finishInteraction);
+canvas.addEventListener('pointercancel', finishInteraction);
+
+function renderForceTable() {
+  const thead = document.getElementById('force-table-head');
+  const tbody = document.getElementById('force-table-body');
+  const activeForces = state.forces.filter(f => f.active && f.mag > 0);
+
+  let headHtml = '<tr><th>Kuvvetin Özellikleri</th>';
+  activeForces.forEach((f, idx) => {
+    headHtml += `<th style="color:${f.color}">${idx + 1}. Kuvvet</th>`;
+  });
+  headHtml += '<th style="color:var(--fnet-color)">Bileşke (Net) Kuvvet</th></tr>';
+  thead.innerHTML = headHtml;
+
+  if (activeForces.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:15px; color:#666;">Cismin kenar çizgilerine tıklayarak kuvvet ekleyin.</td></tr>`;
+    return;
+  }
+
+  const netMagStr = `${state.netForceMag} N`;
+  const showDirRow = state.showDirectionVar;
+
+  if (state.tableMode === 'observation') {
+    let appRow = '<tr><th>Uygulama Noktası</th>';
+    let dirLineRow = state.showDirectionLine ? '<tr><th>Doğrultu</th>' : '';
+    let dirRow = showDirRow ? '<tr><th>Yön</th>' : '';
+    let magRow = '<tr><th>Büyüklük</th>';
+
+    activeForces.forEach(f => {
+      const edgeName = f.edge === 'left' ? 'Sol Kenar' : (f.edge === 'right' ? 'Sağ Kenar' : (f.edge === 'top' ? 'Üst Kenar' : 'Alt Kenar'));
+      appRow += `<td>${edgeName}</td>`;
+      if (state.showDirectionLine) {
+        dirLineLine = (f.angleDeg === 0 || f.angleDeg === 180 || f.angleDeg === 360) ? 'Yatay' : ((f.angleDeg === 90 || f.angleDeg === 270) ? 'Düşey' : 'Eğik');
+        dirLineRow += `<td>${dirLineLine}</td>`;
+      }
+      if (showDirRow) {
+        const cardinalDir = getCardinalDirection(f.angleDeg);
+        dirRow += `<td><b>${cardinalDir}</b></td>`;
+      }
+      magRow += `<td><b>${f.mag} N</b></td>`;
+    });
+
+    appRow += `<td>Cismin Merkezi</td>`;
+    if (state.showDirectionLine) dirLineRow += `<td>Bileşke Eksen</td>`;
+    if (showDirRow) {
+      const netCardinal = getCardinalDirection(state.netAngleDeg);
+      dirRow += `<td><b>${netCardinal}</b></td>`;
+    }
+    magRow += `<td><b>${netMagStr}</b></td>`;
+
+    if (state.showDirectionLine) dirLineRow += '</tr>';
+    if (showDirRow) dirRow += '</tr>';
+
+    let effect = 'Cisim durgun kalır';
+    if (Math.abs(state.velocity) >= 0.01 && state.netForceX === 0) effect = 'Sabit hızla hareket eder';
+    else if (state.netForceX !== 0) effect = 'Hızlanır';
+
+    tbody.innerHTML = `
+      ${appRow}</tr>
+      ${state.showDirectionLine ? dirLineRow : ''}
+      ${showDirRow ? dirRow : ''}
+      ${magRow}</tr>
+      <tr><th>Kuvvetin Etkisi</th><td colspan="${activeForces.length + 1}" style="font-weight:800; color:#0d47a1; background:#e3f2fd;">${effect}</td></tr>
+    `;
+    return;
+  }
+
+  let appRow = '<tr><th>Uygulama Noktası</th>';
+  let dirLineRow = state.showDirectionLine ? '<tr><th>Doğrultu</th>' : '';
+  let dirRow = showDirRow ? '<tr><th>Yön</th>' : '';
+  let magRow = '<tr><th>Büyüklük</th>';
+
+  activeForces.forEach(f => {
+    appRow += `<td><select class="tbl-select" data-id="${f.id}" data-type="app"><option value="">Seç...</option><option value="Sol Kenar">Sol Kenar</option><option value="Sağ Kenar">Sağ Kenar</option><option value="Üst Kenar">Üst Kenar</option><option value="Alt Kenar">Alt Kenar</option></select></td>`;
+    if (state.showDirectionLine) {
+      dirLineRow += `<td><select class="tbl-select" data-id="${f.id}" data-type="dirLine"><option value="">Seç...</option><option value="Yatay">Yatay</option><option value="Düşey">Düşey</option><option value="Eğik">Eğik</option></select></td>`;
+    }
+    if (showDirRow) {
+      dirRow += `<td><select class="tbl-select" data-id="${f.id}" data-type="dir"><option value="">Seç...</option><option value="Doğu">Doğu</option><option value="Batı">Batı</option><option value="Kuzey">Kuzey</option><option value="Güney">Güney</option><option value="Kuzeydoğu">Kuzeydoğu</option><option value="Kuzeybatı">Kuzeybatı</option><option value="Güneydoğu">Güneydoğu</option><option value="Güneybatı">Güneybatı</option></select></td>`;
+    }
+    magRow += `<td><input type="number" class="tbl-input" data-id="${f.id}" data-type="mag" placeholder="N"></td>`;
+  });
+
+  appRow += `<td><select class="tbl-select" data-type="netApp"><option value="">Seç...</option><option value="Merkez">Cismin Merkezi</option></select></td>`;
+  if (state.showDirectionLine) dirLineRow += `<td><select class="tbl-select" data-type="netDirLine"><option value="">Seç...</option><option value="Bileşke Eksen">Bileşke Eksen</option></select></td>`;
+  if (showDirRow) {
+    const netCardinal = getCardinalDirection(state.netAngleDeg);
+    dirRow += `<td><select class="tbl-select" data-type="netDir"><option value="">Seç...</option><option value="${netCardinal}">${netCardinal}</option><option value="Doğu">Doğu</option><option value="Batı">Batı</option><option value="Kuzey">Kuzey</option><option value="Güney">Güney</option></select></td>`;
+  }
+  magRow += `<td><input type="number" class="tbl-input" data-type="netMag" placeholder="N"></td>`;
+
+  if (state.showDirectionLine) dirLineRow += '</tr>';
+  if (showDirRow) dirRow += '</tr>';
+
+  tbody.innerHTML = `
+    ${appRow}</tr>
+    ${state.showDirectionLine ? dirLineRow : ''}
+    ${showDirRow ? dirRow : ''}
+    ${magRow}</tr>
+    <tr><th>Kuvvetin Etkisi</th><td colspan="${activeForces.length + 1}" style="font-weight:800; color:#0d47a1; background:#e3f2fd;">Simülasyon gözlemine göre etkisini belirleyin</td></tr>
+  `;
+}
+
+document.getElementById('check-table-btn').addEventListener('click', () => {
+  const activeForces = state.forces.filter(f => f.active && f.mag > 0);
+  let correctCount = 0;
+  let totalCount = 0;
+
+  document.querySelectorAll('.tbl-select, .tbl-input').forEach(el => {
+    totalCount++;
+    const type = el.getAttribute('data-type');
+    const fId = el.getAttribute('data-id');
+    let userVal = el.value.trim().toLowerCase();
+
+    let isCorrect = false;
+    if (type === 'app') {
+      const f = activeForces.find(item => item.id === fId);
+      if (f) {
+        const expected = (f.edge === 'left' ? 'sol kenar' : (f.edge === 'right' ? 'sağ kenar' : (f.edge === 'top' ? 'üst kenar' : 'alt kenar')));
+        if (userVal === expected) isCorrect = true;
+      }
+    } else if (type === 'dirLine') {
+      const f = activeForces.find(item => item.id === fId);
+      if (f) {
+        const expected = (f.angleDeg === 0 || f.angleDeg === 180 || f.angleDeg === 360) ? 'yatay' : ((f.angleDeg === 90 || f.angleDeg === 270) ? 'düşey' : 'eğik');
+        if (userVal === expected) isCorrect = true;
+      }
+    } else if (type === 'dir') {
+      const f = activeForces.find(item => item.id === fId);
+      if (f) {
+        const expected = getCardinalDirection(f.angleDeg).toLowerCase();
+        if (userVal === expected) isCorrect = true;
+      }
+    } else if (type === 'mag') {
+      const f = activeForces.find(item => item.id === fId);
+      if (f && Number(userVal) === f.mag) isCorrect = true;
+    } else if (type === 'netApp') {
+      if (userVal === 'merkez') isCorrect = true;
+    } else if (type === 'netDirLine') {
+      if (userVal.includes('bileşke') || userVal.includes('eksen')) isCorrect = true;
+    } else if (type === 'netDir') {
+      const expectedNet = getCardinalDirection(state.netAngleDeg).toLowerCase();
+      if (userVal === expectedNet) isCorrect = true;
+    } else if (type === 'netMag') {
+      if (Number(userVal) === state.netForceMag) isCorrect = true;
+    }
+
+    el.classList.remove('cell-correct', 'cell-wrong');
+    el.classList.add(isCorrect ? 'cell-correct' : 'cell-wrong');
+    if (isCorrect) correctCount++;
+  });
+
+  const feedbackEl = document.getElementById('table-feedback');
+  if (correctCount === totalCount) {
+    feedbackEl.style.color = '#2e7d32';
+    feedbackEl.textContent = '🎉 Harika! Tüm yanıtlar doğru.';
+  } else {
+    feedbackEl.style.color = '#d84315';
+    feedbackEl.textContent = `⚠️ ${correctCount}/${totalCount} doğru. Gözden geçirin.`;
+  }
+});
+
+const modalPanel = document.getElementById('module-modal-panel');
+const panelTitle = document.getElementById('mod-panel-title');
+const panelBody = document.getElementById('mod-panel-body');
+
+function openModule(modId) {
+  state.activeModule = modId;
+  modalPanel.style.display = 'flex';
+
+  if (modId === 1) {
+    panelTitle.textContent = 'Konu Modülü 1: Kuvvetin 4 Temel Elemanı (FB.6.2.1)';
+    panelBody.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <p style="margin:0; font-weight:600; color:#1b5e20;">Bir kuvvet vektörünün tam olarak tanımlanabilmesi için 4 temel unsura ihtiyaç vardır:</p>
+        <div class="elements-grid">
+          <div class="element-card">
+            <h4>1. Uygulama Noktası</h4>
+            <p>Kuvvetin cisme temas ettiği kenar çizgileridir (Sol, sağ, üst, alt kenar).</p>
+          </div>
+          <div class="element-card">
+            <h4>2. Doğrultu</h4>
+            <p>Kuvvetin etki ettiği eksendir (Yatay / Düşey).</p>
+          </div>
+          <div class="element-card">
+            <h4>3. Yön</h4>
+            <p>Kuvvetin uygulandığı coğrafi taraftır (Doğu, Batı, Kuzey, Güney).</p>
+          </div>
+          <div class="element-card">
+            <h4>4. Büyüklük</h4>
+            <p>Kuvvetin şiddetidir; Newton (N) birimiyle ifade edilir.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (modId === 2) {
+    panelTitle.textContent = 'Konu Modülü 2: Bileşke (Net) Kuvvet (FB.6.2.1)';
+    panelBody.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <p style="margin:0; font-weight:600; color:#0d47a1;">
+          <b>Bileşke Kuvvet:</b> Birden fazla kuvvetin yaptığı tek etki ($F_{net}$).
+        </p>
+      </div>
+    `;
+  } else if (modId === 3) {
+    panelTitle.textContent = 'Konu Modülü 3: Dengelenmiş ve Dengelenmemiş Kuvvetler (FB.6.2.2)';
+    panelBody.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <p style="margin:0; font-weight:600; color:#2e7d32;">
+          <b>Dengelenmiş ($F_{net} = 0$):</b> Cisim durgun kalır veya sabit hızla hareket eder.<br>
+          <b>Dengelenmemiş ($F_{net} \\neq 0$):</b> Cisim hızlanır.
+        </p>
+      </div>
+    `;
+  } else if (modId === 4) {
+    panelTitle.textContent = 'Konu Modülü 4: Ölçme ve Değerlendirme (FB.6.2.1 & FB.6.2.2)';
+    let questionsHtml = `
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <p style="margin:0; font-weight:700; color:#0d47a1;">Değerlendirme Soruları:</p>
+          <button id="btn-toggle-teacher" style="padding:2px 8px; font-size:12px; font-weight:700; background:#37474f; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+            ${state.assessment.teacherView ? 'Öğrenci Görünümüne Dön' : 'Öğretmen Görünümü (Rubrik)'}
+          </button>
+        </div>
+    `;
+
+    const qList = [
+      { id: 'q1', title: '1. Soru (Bileşke Kuvvet)', text: `Sahnedeki ${state.mass} kg kütleli cismin kenarlarına uyguladığınız net kuvvet ${state.netForceMag} N (${getCardinalDirection(state.netAngleDeg)}) iken cismin hareketini açıklayınız.` },
+      { id: 'q2', title: '2. Soru (Sürtünme Etkisi)', text: `Sürtünme katsayısını (μ) artırdığınızda cismin hareketini sürdürmek için gereken kuvvet nasıl değişti?` },
+      { id: 'q3', title: '3. Soru (Dengelenmiş Kuvvetler)', text: `Net kuvvetin sıfır olduğu ($F_{net} = 0$) durumda cismin hızı hakkında ne söyleyebilirsiniz?` }
+    ];
+
+    qList.forEach(q => {
+      const val = state.assessment.answers[q.id] || '';
+      questionsHtml += `
+        <div style="background:#f5f5f5; border:1px solid #cfd8dc; padding:6px; border-radius:6px; margin-top:4px;">
+          <div style="font-weight:700; color:#333; margin-bottom:2px;">${q.title}</div>
+          <p style="margin:0 0 4px 0; font-size:12px; color:#455a64;">${q.text}</p>
+          <textarea class="assess-textarea" data-qid="${q.id}" style="width:100%; height:38px; border:1px solid #90a4ae; border-radius:4px; padding:3px; font-size:12px;" placeholder="Yanıtınızı buraya yazınız...">${val}</textarea>
+          ${state.assessment.teacherView ? `<div style="margin-top:3px; padding:4px; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:4px; font-size:11px; color:#1b5e20;"><b>Örnek Beklenen Yanıt:</b> Öğrenci yön ve büyüklük ilişkilerini açıklamalıdır.</div>` : ''}
+        </div>
+      `;
+    });
+
+    questionsHtml += `
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <button id="btn-save-assess" style="background:#2e7d32; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-weight:700; cursor:pointer; font-size:12px;">Yanıtlarımı Kaydet</button>
+        <button id="btn-print-assess" style="background:#1565c0; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-weight:700; cursor:pointer; font-size:12px;">Yazdır / Rapor Al</button>
+      </div>
+    </div>`;
+
+    panelBody.innerHTML = questionsHtml;
+
+    document.getElementById('btn-toggle-teacher')?.addEventListener('click', () => {
+      state.assessment.teacherView = !state.assessment.teacherView;
+      openModule(4);
+    });
+
+    document.querySelectorAll('.assess-textarea').forEach(ta => {
+      ta.addEventListener('input', (e) => {
+        state.assessment.answers[e.target.getAttribute('data-qid')] = e.target.value;
+      });
+    });
+
+    document.getElementById('btn-save-assess')?.addEventListener('click', () => {
+      alert('Yanıtlarınız oturum belleğine başarıyla kaydedildi.');
+    });
+
+    document.getElementById('btn-print-assess')?.addEventListener('click', () => {
+      window.print();
+    });
+  }
+}
+
+document.getElementById('mod-btn-1').addEventListener('click', () => openModule(1));
+document.getElementById('mod-btn-2').addEventListener('click', () => openModule(2));
+document.getElementById('mod-btn-3').addEventListener('click', () => openModule(3));
+document.getElementById('mod-btn-4').addEventListener('click', () => openModule(4));
+
+document.getElementById('mod-panel-close').addEventListener('click', () => {
+  modalPanel.style.display = 'none';
+  state.activeModule = null;
+});
+
+document.getElementById('btn-add-force').addEventListener('click', () => {
+  const newId = 'f_' + Date.now();
+  const color = PALETTE[state.forces.length % PALETTE.length].hex;
+  state.forces.push({
+    id: newId,
+    active: true,
+    mag: 100,
+    angleDeg: 0,
+    edge: 'left',
+    edgeRatio: 0.5,
+    color: color
+  });
+  renderForceTable();
+  drawScene();
+});
+
+document.getElementById('btn-play-pause').addEventListener('click', (e) => {
+  state.running = !state.running;
+  e.target.textContent = state.running ? '⏸' : '▶';
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.running = true;
+  state.velocity = 0;
+  state.groundOffset = 0;
+  state.forces = [];
+  renderForceTable();
+  drawScene();
+});
+
+document.getElementById('btn-clear-vectors').addEventListener('click', () => {
+  state.forces = [];
+  state.velocity = 0;
+  state.groundOffset = 0;
+  renderForceTable();
+  drawScene();
+});
+
+document.getElementById('slider-friction').addEventListener('input', (e) => {
+  state.mu = Number(e.target.value);
+  document.getElementById('mu-label').textContent = `μ = ${state.mu.toFixed(2)}`;
+  stepPhysics(0);
+  drawScene();
+});
+
+document.getElementById('chk-forces').addEventListener('change', e => { state.showForces = e.target.checked; drawScene(); });
+document.getElementById('chk-net').addEventListener('change', e => { state.showNetForce = e.target.checked; drawScene(); });
+document.getElementById('chk-values').addEventListener('change', e => { state.showValuesOnHover = e.target.checked; drawScene(); });
+document.getElementById('chk-Direction').addEventListener('change', e => { state.showDirectionLine = e.target.checked; renderForceTable(); drawScene(); });
+document.getElementById('chk-direction-var').addEventListener('change', e => { state.showDirectionVar = e.target.checked; renderForceTable(); });
+document.getElementById('chk-masses').addEventListener('change', e => { state.showMasses = e.target.checked; drawScene(); });
+document.getElementById('chk-speed').addEventListener('change', e => { state.showSpeedGauge = e.target.checked; drawScene(); });
+document.getElementById('chk-freedir').addEventListener('change', e => { state.freeDirection = e.target.checked; });
+
+document.querySelectorAll('.obj-item').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.obj-item').forEach(el => el.classList.remove('active'));
+    card.classList.add('active');
+    state.objectType = card.getAttribute('data-type');
+    state.mass = Number(card.getAttribute('data-mass'));
+    document.getElementById('active-obj-label').textContent = `${card.getAttribute('data-name')} (${state.mass} kg)`;
+    stepPhysics(0);
+    drawScene();
+  });
+});
+
+document.getElementById('btn-mode-obs').addEventListener('click', () => {
+  state.tableMode = 'observation';
+  document.getElementById('btn-mode-obs').classList.add('active');
+  document.getElementById('btn-mode-stu').classList.remove('active');
+  document.getElementById('check-table-btn').style.display = 'none';
+  renderForceTable();
+});
+
+document.getElementById('btn-mode-stu').addEventListener('click', () => {
+  state.tableMode = 'student';
+  document.getElementById('btn-mode-stu').classList.add('active');
+  document.getElementById('btn-mode-obs').classList.remove('active');
+  document.getElementById('check-table-btn').style.display = 'inline-block';
+  renderForceTable();
+});
+
+function animateLoop(timestamp) {
+  if (state.running) stepPhysics(1 / 60);
+  drawScene();
+  requestAnimationFrame(animateLoop);
+}
+
+window.onload = () => {
+  stepPhysics(0);
+  renderForceTable();
+  requestAnimationFrame(animateLoop);
+};
+</script>
+</body>
